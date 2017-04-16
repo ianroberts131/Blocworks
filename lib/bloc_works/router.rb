@@ -10,7 +10,7 @@ module BlocWorks
     
     def fav_icon(env)
       if env['PATH_INFO'] == '/favicon.ico'
-        return [404, {'Content-Type' => 'text/html'}, []]
+        return [404, {'Content-Type' => 'text/html'}, ["No favicon found"]]
       end
     end
   end
