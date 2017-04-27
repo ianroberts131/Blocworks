@@ -10,8 +10,8 @@ module BlocWorks
       if fav_icon(env)
         return fav_icon(env)
       end
-      controller, action = controller_and_action(env)
-      [200, {'Content-Type' => 'text/html'}, [controller.new(env).send(action)]]
+      rack_app = get_rack_app(env)
+      rack_app.call(env)
     end
   end
 end
