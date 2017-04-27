@@ -2,6 +2,14 @@ require 'erubis'
 
 module BlocWorks
   class Controller
+    def request
+      @request ||= Rack::Request.new(@env)
+    end
+    
+    def params
+      request.params
+    end
+    
     def initialize(env)
       @env = env
     end
