@@ -1,5 +1,6 @@
 module BlocWorks
   class Application
+    
     def controller_and_action(env)
       _, controller, action, _ = env["PATH_INFO"].split("/", 4)
       controller = controller.capitalize
@@ -23,7 +24,6 @@ module BlocWorks
       if @router.nil?
         raise "No routes defined"
       end
-      
       @router.look_up_url(env["PATH_INFO"])
     end
   end
@@ -32,6 +32,13 @@ module BlocWorks
     def initialize
       @rules = []
     end
+    
+    def resources(resource)
+      send(:map, ":#{resource.to_s}", "#{resource.to_s}#index")
+      send(:map, ":#{resource.to_s}/new", "#{resource.to_s}#new")
+      send(:map, ":#{resource.to_s}/:id", "#{resource.to_s}#show")
+    end
+      
     
     def map(url, *args)
       options = {}
