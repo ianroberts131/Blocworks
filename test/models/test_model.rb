@@ -1,4 +1,4 @@
 require 'bloc_record/base'
 
-class Test < BlocRecord::Base
+class TestModel < BlocRecord::Base
 end

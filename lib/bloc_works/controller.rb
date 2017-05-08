@@ -7,13 +7,8 @@ module BlocWorks
       @routing_params = {}
     end
     
-    def redirect_to(uri)
-      Rack::Response.new.redirect('/')
-    end
-    
     def dispatch(action, routing_params = {})
       @routing_params = routing_params
-      puts "The routing params are #{@routing_params}"
       text = self.send(action)
       render(action)
       if has_response?
@@ -43,6 +38,10 @@ module BlocWorks
     
     def render(action)
       response(create_response_array(action))
+    end
+    
+    def redirect_to(uri)
+      [302, { "Location" => uri }, []]
     end
     
     def get_response

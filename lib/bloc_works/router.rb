@@ -37,24 +37,45 @@ module BlocWorks
       send(:map, ":#{resource.to_s}", "#{resource.to_s}#index")
       send(:map, ":#{resource.to_s}/new", "#{resource.to_s}#new")
       send(:map, ":#{resource.to_s}/:id", "#{resource.to_s}#show")
+      send(:map, ":#{resource.to_s}/:id/edit", "#{resource.to_s}#edit")
+      send(:map, ":#{resource.to_s}", "#{resource.to_s}#create")
     end
       
-    
     def map(url, *args)
-      options = {}
-      options = args.pop if args[-1].is_a?(Hash)
+      options = args[-1].is_a?(Hash) ? args.pop : {}
       options[:default] ||= {}
       
-      destination = nil
-      destination = args.pop if args.size > 0
-      raise "Too many args!" if args.size > 0
-      
-      parts = url.split("/")
-      parts.reject! { |part| part.empty? }
-      
+      args.size > 1 ? (raise "Too many args!") : destination = args[0]
+
+      define_rules(url, options, destination)
+    end
+    
+    def look_up_url(url)
+      @rules.each do |rule|
+        if rule_match(rule, url)
+          params = rule[:options][:default].dup
+          
+          rule[:vars].each_with_index do |var, index|
+            params[var] = rule_match(rule, url).captures[index]
+          end
+          return set_destination(rule, params)
+        end
+      end
+    end
+    
+    def split_url(url)
+      url.split("/").reject { |part| part.empty? }
+    end
+    
+    def create_regex(expression)
+      Regexp.new("^/#{expression}$")
+    end
+    
+    def define_rules(url, options, destination)
+      url_parts = split_url(url)
       vars, regex_parts = [], []
       
-      parts.each do |part|
+      url_parts.each do |part|
         case part[0]
         when ":"
           vars << part[1..-1]
@@ -66,35 +87,25 @@ module BlocWorks
           regex_parts << part
         end
       end
-      
-      regex = regex_parts.join("/")
-      @rules.push({ regex: Regexp.new("^/#{regex}$"),
-                    vars: vars, destination: destination,
-                    options: options })
+      regex = create_regex(regex_parts.join("/"))
+      @rules.push({ regex: regex, vars: vars, 
+                    destination: destination, options: options })
     end
     
-    def look_up_url(url)
-      @rules.each do |rule|
-        rule_match = rule[:regex].match(url)
-        
-        if rule_match
-          options = rule[:options]
-          params = options[:default].dup
-          
-          rule[:vars].each_with_index do |var, index|
-            params[var] = rule_match.captures[index]
-          end
-          
-          if rule[:destination]
-            return get_destination(rule[:destination], params)
-          else
-            controller = params["controller"]
-            action = params["action"]
-            return get_destination("#{controller}##{action}", params)
-          end
-        end
+    def set_destination(rule, params)
+      if rule[:destination]
+        return get_destination(rule[:destination], params)
+      else
+        controller = params["controller"]
+        action = params["action"]
+        return get_destination("#{controller}##{action}", params)
       end
     end
+    
+    def rule_match(rule, url)
+      rule[:regex].match(url)
+    end
+    
     def get_destination(destination, routing_params = {})
       if destination.respond_to?(:call)
         return destination
