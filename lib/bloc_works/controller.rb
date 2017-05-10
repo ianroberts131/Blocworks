@@ -9,8 +9,13 @@ module BlocWorks
     
     def dispatch(action, routing_params = {})
       @routing_params = routing_params
+      if params['_method'] == "DELETE"
+        action = "destroy"
+      end
       text = self.send(action)
-      render(action)
+      if @env["REQUEST_METHOD"] == "GET"
+        render(action)
+      end
       if has_response?
         rack_response = get_response
         [rack_response.status, rack_response.header, [rack_response.body].flatten]
@@ -20,6 +25,8 @@ module BlocWorks
     end
     
     def self.action(action, response = {})
+      puts "The action is #{action}"
+      puts "The routing params are #{@routing_params}"
       proc { |env| self.new(env).dispatch(action, response) }
     end
     
@@ -41,7 +48,7 @@ module BlocWorks
     end
     
     def redirect_to(uri)
-      [302, { "Location" => uri }, []]
+      @response = Rack::Response.new([], 302, { "Location" => uri })
     end
     
     def get_response
@@ -53,6 +60,7 @@ module BlocWorks
     end
     
     def create_response_array(action)
+      puts "The REQUEST METHOD is #{@env["REQUEST_METHOD"]}"
       filename = File.join("app", "views", controller_dir, "#{action}.html.erb")
       template = File.read(filename)
       eruby = Erubis::Eruby.new(template)

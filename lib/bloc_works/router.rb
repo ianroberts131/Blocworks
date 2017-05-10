@@ -24,7 +24,8 @@ module BlocWorks
       if @router.nil?
         raise "No routes defined"
       end
-      @router.look_up_url(env["PATH_INFO"])
+      puts "The env is #{env}"
+      @router.look_up_url(env["PATH_INFO"], env["REQUEST_METHOD"])
     end
   end
   
@@ -34,25 +35,28 @@ module BlocWorks
     end
     
     def resources(resource)
-      send(:map, ":#{resource.to_s}", "#{resource.to_s}#index")
-      send(:map, ":#{resource.to_s}/new", "#{resource.to_s}#new")
-      send(:map, ":#{resource.to_s}/:id", "#{resource.to_s}#show")
-      send(:map, ":#{resource.to_s}/:id/edit", "#{resource.to_s}#edit")
-      send(:map, ":#{resource.to_s}", "#{resource.to_s}#create")
+      
+      send(:map, "GET",     ":#{resource.to_s}", "#{resource.to_s}#index")
+      send(:map, "GET",     ":#{resource.to_s}/new", "#{resource.to_s}#new")
+      send(:map, "GET",     ":#{resource.to_s}/:id", "#{resource.to_s}#show")
+      send(:map, "GET",     ":#{resource.to_s}/:id/edit", "#{resource.to_s}#edit")
+      send(:map, "POST",    ":#{resource.to_s}", "#{resource.to_s}#create")
+      send(:map, "POST",    ":#{resource.to_s}/:id", "#{resource.to_s}#update")
+      send(:map, "DELETE",  ":#{resource.to_s}/:id", "#{resource.to_s}#destroy")
     end
       
-    def map(url, *args)
+    def map(request_method, url, *args)
       options = args[-1].is_a?(Hash) ? args.pop : {}
       options[:default] ||= {}
       
       args.size > 1 ? (raise "Too many args!") : destination = args[0]
 
-      define_rules(url, options, destination)
+      define_rules(request_method, url, options, destination)
     end
     
-    def look_up_url(url)
+    def look_up_url(url, request_method)
       @rules.each do |rule|
-        if rule_match(rule, url)
+        if rule_match(rule, url) && rule[:request_method] == request_method
           params = rule[:options][:default].dup
           
           rule[:vars].each_with_index do |var, index|
@@ -71,7 +75,7 @@ module BlocWorks
       Regexp.new("^/#{expression}$")
     end
     
-    def define_rules(url, options, destination)
+    def define_rules(request_method, url, options, destination)
       url_parts = split_url(url)
       vars, regex_parts = [], []
       
@@ -89,7 +93,7 @@ module BlocWorks
       end
       regex = create_regex(regex_parts.join("/"))
       @rules.push({ regex: regex, vars: vars, 
-                    destination: destination, options: options })
+                    destination: destination, options: options, request_method: request_method })
     end
     
     def set_destination(rule, params)
@@ -103,10 +107,14 @@ module BlocWorks
     end
     
     def rule_match(rule, url)
+      puts "The rule is #{rule}"
+      puts "The url is #{url}"
       rule[:regex].match(url)
     end
     
     def get_destination(destination, routing_params = {})
+      puts "The destination is #{destination}"
+      puts "The controller is #{routing_params["controller"]}"
       if destination.respond_to?(:call)
         return destination
       end
